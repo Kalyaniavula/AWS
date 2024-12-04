@@ -1,0 +1,143 @@
+# s3
+AWS S3bucket-Manual process 
+# What is S3?
+Amazon S3 (Simple Storage Service) it is a AWS storage service.
+we can use it to store files (called objects) in buckets (like folders) and access them from anywhere.
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# How we can  Create an S3 Bucket
+Log in to AWS Console: Go to AWS Management Console.
+Go to S3: Search for S3 and open it.
+Create a Bucket: Click on Create bucket.
+Enter a unique name for the bucket (e.g., "my-awskalyani-bucket").
+Select a region (like US-East or Asia-Pacific).
+Configure Settings: Leave most options as default unless needed.
+Create the Bucket: Click Create bucket at the bottom.
+
+------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# How to Make an S3 Bucket Public
+Go to Your Bucket: Click on the bucket you created.
+Enable Public Access:
+Go to Permissions → Block public access settings.
+Click Edit → Uncheck all the options → Save changes.
+Add a Bucket Policy:
+Under Permissions, go to Bucket Policy.
+Add this JSON code (replace <bucket-name> with your bucket name):
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadGetObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+
+ "Resource": "arn:aws:s3:::<bucket-name>/*"
+    }
+  ]
+}
+Save it
+Upload Files: Any file you upload will now be publicly accessible through its URL.
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Storage Classes
+AWS S3 offers different storage classes based on cost and usage:
+
+Standard: For frequently accessed data.
+Standard-IA (Infrequent Access): Cheaper, for files you don’t access often.
+Glacier: For long-term archiving; very cheap but slow retrieval.
+Glacier Deep Archive: Cheapest; used for data you rarely need.
+
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+Creating an S3 bucket using Terraform to manage infrastructure as code. 
+Create one file in desktop eg.s3terrafrom.tf
+click on flie create another new flie eg.,s3 main.tf
+Install Terraform
+Go VS code open new flie (what we are creating in desktop)
+
+terraform {
+  required_providers {
+    aws = {
+      source = "hashicorp/aws"
+      version = "4.64.0"
+    }
+  }
+}
+
+# Specify the provider
+provider "aws" {
+  region     = "us-east-1" # Replace with your desired region
+  access_key = "......................." # Replace with your AWS Access Key ID
+  secret_key = "..........................." # Replace with your AWS Secret Access Key
+}
+
+# Create an S3 bucket
+resource "aws_s3_bucket" "example_bucket" {
+  bucket        = "my-unique-bucket-name" # Replace with a globally unique bucket name
+  acl           = "private"
+
+  # Enable versioning
+  versioning {
+    enabled = true
+  }
+
+  # Enable server-side encryption
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = "AES256" # Use "aws:kms" for KMS encryption
+      }
+    }
+  }
+
+  tags = {
+    Name        = "ExampleBucket"
+    Environment = "Production"
+  }
+}
+
+# Optional: Bucket policy for public access prevention
+resource "aws_s3_bucket_policy" "example_bucket_policy" {
+  bucket = aws_s3_bucket.example_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action    = "s3:*"
+        Effect    = "Deny"
+        Principal = "*"
+        Resource  = [
+        
+         "${aws_s3_bucket.example_bucket.arn}",
+          "${aws_s3_bucket.example_bucket.arn}/*"
+        ]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = false
+          }
+        }
+      }
+    ]
+  })
+}
+
+# Optional: S3 Bucket Public Access Block
+resource "aws_s3_bucket_public_access_block" "example_bucket_pab" {
+  bucket = aws_s3_bucket.example_bucket.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+Go terminal run the command 
+terraform init (Initialize Terraform)
+terraform apply (Apply the Configuration)
